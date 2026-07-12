@@ -1,8 +1,8 @@
 "use client";
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useAppDispatch } from "@/redux/store";
-import { setCredentials, clearCredentials } from "@/redux/slices/authSlice";
+import { useAppDispatch } from "@/modules/shared/redux/store";
+import { setCredentials, clearCredentials } from "../redux/authSlice";
 
 export function AuthSync({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();

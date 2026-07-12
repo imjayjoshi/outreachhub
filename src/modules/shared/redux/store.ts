@@ -2,8 +2,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { persistStore, persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
-import uiReducer from "./slices/uiSlice";
-import authReducer from "./slices/authSlice";
+import uiReducer from "./uiSlice";
+import authReducer from "@/modules/auth/redux/authSlice";
 
 const rootReducer = combineReducers({
   ui: uiReducer,
@@ -11,10 +11,11 @@ const rootReducer = combineReducers({
 });
 
 const persistConfig = {
-  key: "outreachhub",
+  key: "careerflow",
   storage,
   whitelist: ["ui", "auth"],
 };
+
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({

@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { AuthProvider } from "@/providers/AuthProvider";
-import { ReduxProvider } from "@/providers/ReduxProvider";
-import { AuthSync } from "@/providers/AuthSync";
-import { auth } from "@/lib/auth";
+import { RootProvider } from "@/modules/shared";
+import { auth } from "@/modules/auth";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -38,11 +36,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={cn("h-full", "antialiased", poppins.variable)}>
       <body className={cn("min-h-full flex flex-col", poppins.className)}>
-        <AuthProvider session={session}>
-          <ReduxProvider>
-            <AuthSync>{children}</AuthSync>
-          </ReduxProvider>
-        </AuthProvider>
+        <RootProvider session={session}>{children}</RootProvider>
       </body>
     </html>
   );

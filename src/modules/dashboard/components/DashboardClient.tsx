@@ -1,11 +1,14 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
-import { useAppDispatch, useAppSelector } from "@/redux/store";
-import { toggleSidebar } from "@/redux/slices/uiSlice";
+import {
+  useAppDispatch,
+  useAppSelector,
+  toggleSidebar,
+} from "@/modules/shared";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
-import { dashboardMenuItems } from "@/config/menu";
+import { dashboardMenuItems } from "../config/menu";
 import {
   LogOut,
   Menu,

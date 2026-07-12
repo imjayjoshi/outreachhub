@@ -1,36 +1,140 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CareerFlow
 
-## Getting Started
+CareerFlow is a modern, high-performance web application designed to manage, automate, and monitor career outreach and campaign analytics.
 
-First, run the development server:
+It is built with **Next.js 15 (App Router)**, **React 19**, **Prisma ORM (Neon Serverless PostgreSQL)**, **Redux Toolkit**, **NextAuth.js v5**, and styled with **Tailwind CSS v4** featuring the premium **Midnight Ink** design system.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 1. Directory Architecture (Modular Monolith)
+
+This application adheres to an industry-standard **Modular Monolith** structure under the `src/` directory. All features and domains are encapsulated within self-contained modules to prevent imports spaghetti and maintain clear boundaries.
+
+```
+src/
+├── app/                  # Route Definitions (Thin Page Shells only)
+│   ├── api/auth/         # NextAuth handler routes
+│   ├── dashboard/        # Dashboard view shell
+│   ├── login/            # Login view shell
+│   └── layout.tsx        # Root HTML Layout, wraps RootProvider
+│
+├── components/           # General Shared UI components (Shadcn/UI components)
+│   └── ui/               # Lower-level design building blocks (button, inputs, etc.)
+│
+├── lib/                  # Central utility helpers (e.g., standard cn utility)
+│   └── utils.ts
+│
+└── modules/              # Unified Core Modules
+    ├── auth/             # Encapsulates Login components, validators, and auth syncing
+    │   ├── components/   # LoginPage view
+    │   ├── providers/    # AuthSync component (synchronizes NextAuth session to Redux)
+    │   ├── redux/        # authSlice state & actions
+    │   ├── schemas/      # Yup Formik validation schemas
+    │   ├── auth.ts       # Node-based credentials authorization handler
+    │   ├── auth.config.ts# Edge-compatible NextAuth path authorization callbacks
+    │   └── index.ts      # Public API gateway (Public exports for other modules)
+    │
+    ├── dashboard/        # Encapsulates Layout, Navigation Drawer, and metrics widgets
+    │   ├── components/   # DashboardClient navigation shell
+    │   ├── config/       # vertical menu items setup
+    │   └── index.ts      # Public API gateway
+    │
+    └── shared/           # Cross-cutting concerns and core infrastructure
+        ├── api/          # Central Axios API client
+        ├── database/     # Prisma database & Redis cache connections
+        ├── providers/    # RootProvider (AuthProvider + ReduxProvider + AuthSync)
+        ├── redux/        # Main Redux Store definition & UI slice
+        └── index.ts      # Public API gateway
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Module Boundary Rules
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Every module exposes a public entry point (`src/modules/<module-name>/index.ts`).
+- Other modules or routing files **must** only import assets, slices, hooks, or components from this high-level gateway (e.g., `import { LoginPage } from "@/modules/auth"`).
+- Avoid deep imports (e.g., `import ... from "@/modules/auth/components/LoginPage"`) to maintain high cohesion and clear modular decoupling.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 2. Shared Axios API Client
 
-To learn more about Next.js, take a look at the following resources:
+All server and environment-safe requests are routed through the central master API client located in **`src/modules/shared/api/apiClient.ts`**:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Environment Agnostic**: Fully safe for both server-side execution (Server Components/Actions) and client-side execution.
+- **Auto Base URL**: Prefixes endpoints with `/api` or the defined environment variables.
+- **Global Interceptors**:
+  - **Request Interceptor**: Configured to dynamically append authorization tokens or request parameters.
+  - **Response Interceptor**: Centralizes global error codes handling (such as logging warnings on `401 Unauthorized` or displaying errors on `500 Server Errors`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 3. Design System & Theme (Midnight Ink)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+We use the customized **Midnight Ink** dark palette. Standard shadcn elements and Tailwind variables map directly to default `:root` variables defined in `src/app/globals.css`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Typography**: **Poppins** is set globally on the `<body>` element.
+- **Colors**:
+  - **Background**: `#0B0F14` (`bg-midnight-bg`)
+  - **Surface**: `#141A22` (`bg-midnight-surface`)
+  - **Card**: `#1A2230` (`bg-midnight-card`)
+  - **Primary (Accent Blue)**: `#5A8DFF` (`bg-midnight-primary`)
+  - **Secondary (Teal/Cyan)**: `#4FD1C5` (`text-midnight-secondary`)
+  - **Border**: `#2B3442` (`border-midnight-border`)
+  - **Text**: `#F8FAFC`
+  - **Muted**: `#94A3B8` (`text-midnight-muted`)
+
+---
+
+## 4. Setup & Installation
+
+### A. Environment Configuration
+
+Create a `.env` file in the root directory and define the following:
+
+```env
+DATABASE_URL="postgresql://user:pass@host/dbname?sslmode=require"
+REDIS_URL="redis://localhost:6379"
+NEXTAUTH_SECRET="your-super-secret-random-key"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+### B. Install Dependencies
+
+```bash
+pnpm install
+```
+
+### C. Initialize Database & Seed
+
+Prisma is configured to generate its client outputs to `src/generated/prisma`. Run migrations and seed default credentials:
+
+```bash
+# Push schema migrations
+pnpm prisma db push
+
+# Generate client
+pnpm prisma generate
+
+# Seed test users
+pnpm prisma db seed
+```
+
+- **Test Email**: `test@outreachhub.dev`
+- **Test Password**: `password123`
+
+---
+
+## 5. Development Workflows & Scripts
+
+Run the development server locally:
+
+```bash
+pnpm dev
+```
+
+### Quality Tooling
+
+Before making commits, Husky triggers `lint-staged` to run ESLint fixes and Prettier formatting automatically on modified files.
+
+- **Typecheck**: `pnpm typecheck` (runs `tsc --noEmit` to validate all TypeScript code).
+- **Linting**: `pnpm lint` (runs Next.js ESLint linting).
+- **Format**: `pnpm format` (runs Prettier validation).
