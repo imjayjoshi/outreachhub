@@ -2,7 +2,7 @@
 
 CareerFlow is a modern, high-performance web application designed to manage, automate, and monitor career outreach and campaign analytics.
 
-It is built with **Next.js 15 (App Router)**, **React 19**, **Prisma ORM (Neon Serverless PostgreSQL)**, **Redux Toolkit**, **NextAuth.js v5**, and styled with **Tailwind CSS v4** featuring the premium **Midnight Ink** design system.
+It is built with **Next.js 15 (App Router)**, **React 19**, **Prisma ORM 7 (Neon Serverless PostgreSQL)**, **Redux Toolkit**, **NextAuth.js v5**, and styled with **Tailwind CSS v4** featuring the premium **Midnight Ink** design system.
 
 ---
 
@@ -14,7 +14,10 @@ This application adheres to an industry-standard **Modular Monolith** structure 
 src/
 ├── app/                  # Route Definitions (Thin Page Shells only)
 │   ├── api/auth/         # NextAuth handler routes
-│   ├── dashboard/        # Dashboard view shell
+│   ├── (app)/            # Authenticated App Route Group
+│   │   ├── companies/    # Companies page
+│   │   ├── contacts/     # Contacts page
+│   │   └── dashboard/    # Dashboard overview page
 │   ├── login/            # Login view shell
 │   └── layout.tsx        # Root HTML Layout, wraps RootProvider
 │
@@ -34,9 +37,23 @@ src/
     │   ├── auth.config.ts# Edge-compatible NextAuth path authorization callbacks
     │   └── index.ts      # Public API gateway (Public exports for other modules)
     │
+    ├── companies/        # Encapsulates Companies views, bulk CSV import APIs, and mutations
+    │   ├── components/   # CompanyList, AddEditCompany views
+    │   ├── queries/      # db mutations and queries for companies
+    │   └── index.ts      # Public API gateway
+    │
+    ├── contacts/         # Handles lead contacts, details, and association queries
+    │   ├── components/   # ContactsTable, AddEditContact views
+    │   └── index.ts      # Public API gateway
+    │
     ├── dashboard/        # Encapsulates Layout, Navigation Drawer, and metrics widgets
-    │   ├── components/   # DashboardClient navigation shell
+    │   ├── components/   # AppShell layout, DashboardClient panels
     │   ├── config/       # vertical menu items setup
+    │   └── index.ts      # Public API gateway
+    │
+    ├── leads/            # Workflows for leads scrapers, web crawler engines (Clutch), and schedulers
+    │   ├── discovery/    # clutchService, searchService engines
+    │   ├── jobs/         # scheduler, trigger, and dailyFetchJob worker setup
     │   └── index.ts      # Public API gateway
     │
     └── shared/           # Cross-cutting concerns and core infrastructure
@@ -61,6 +78,7 @@ All server and environment-safe requests are routed through the central master A
 
 - **Environment Agnostic**: Fully safe for both server-side execution (Server Components/Actions) and client-side execution.
 - **Auto Base URL**: Prefixes endpoints with `/api` or the defined environment variables.
+- **Cancel Interceptors**: Automatically ignores aborted/cancelled requests during page transitions to prevent false-alarm console warning logs.
 - **Global Interceptors**:
   - **Request Interceptor**: Configured to dynamically append authorization tokens or request parameters.
   - **Response Interceptor**: Centralizes global error codes handling (such as logging warnings on `401 Unauthorized` or displaying errors on `500 Server Errors`).
@@ -105,7 +123,7 @@ pnpm install
 
 ### C. Initialize Database & Seed
 
-Prisma is configured to generate its client outputs to `src/generated/prisma`. Run migrations and seed default credentials:
+Prisma 7 connection settings are configured inside `prisma.config.ts` and loaded dynamically. The client is generated in the standard `node_modules` path:
 
 ```bash
 # Push schema migrations
@@ -133,8 +151,8 @@ pnpm dev
 
 ### Quality Tooling
 
-Before making commits, Husky triggers `lint-staged` to run ESLint fixes and Prettier formatting automatically on modified files.
+Before making commits, Husky triggers ESLint fixes and Prettier formatting automatically on modified files.
 
 - **Typecheck**: `pnpm typecheck` (runs `tsc --noEmit` to validate all TypeScript code).
-- **Linting**: `pnpm lint` (runs Next.js ESLint linting).
+- **Linting**: `pnpm lint` (runs ESLint on the source directory).
 - **Format**: `pnpm format` (runs Prettier validation).
