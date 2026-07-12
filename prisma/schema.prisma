@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -23,6 +22,7 @@ model User {
   contacts  Contact[]
   templates Template[]
   campaigns Campaign[]
+  leads     Lead[]
 }
 
 model Account {
@@ -65,22 +65,33 @@ model Company {
   userId    String
   name      String
   website   String?
+  industry  String?
+  size      String?
+  location  String?
   notes     String?
   createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contacts  Contact[]
+  updatedAt DateTime  @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts Contact[]
 }
 
 model Contact {
-  id        String   @id @default(cuid())
-  userId    String
-  companyId String?
-  name      String
-  email     String
-  role      String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company   Company? @relation(fields: [companyId], references: [id])
+  id          String   @id @default(cuid())
+  userId      String
+  companyId   String?
+  name        String
+  email       String
+  phone       String?
+  role        String?
+  linkedinUrl String?
+  status      String   @default("new")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company         Company?          @relation(fields: [companyId], references: [id])
+  campaignContact CampaignContact[]
 }
 
 model Template {
@@ -89,15 +100,75 @@ model Template {
   name      String
   subject   String
   body      String   @db.Text
+  variables Json?
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
 }
 
 model Campaign {
-  id        String   @id @default(cuid())
-  userId    String
-  name      String
-  status    String   @default("draft")
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  templateId String?
+  name       String
+  status     String   @default("draft")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template        Template?         @relation(fields: [templateId], references: [id])
+  campaignContact CampaignContact[]
+}
+
+model CampaignContact {
+  id         String    @id @default(cuid())
+  campaignId String
+  contactId  String
+  status     String    @default("pending")
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, contactId])
+}
+
+model Lead {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  website      String   @unique
+  city         String
+  state        String?
+  industry     String   @default("IT")
+  email        String?
+  source       String
+  lastFetched  DateTime @default(now())
+  status       String   @default("new")
+  mailSent     Boolean  @default(false)
+  followUpSent Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyFetchTarget {
+  id     String @id @default(cuid())
+  city   String @unique
+  state  String
+  target Int
+}
+
+model DailyFetchLog {
+  id          String   @id @default(cuid())
+  runDate     DateTime @default(now())
+  city        String
+  found       Int
+  duplicates  Int
+  inserted    Int
+  emailsFound Int
+  status      String
 }

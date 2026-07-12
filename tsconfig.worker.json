@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["es2020"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": false,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "outDir": "dist-worker",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "ts-node": {
+      "require": ["tsconfig-paths/register"],
+      "transpileOnly": true
+    }
+  },
+  "include": [
+    "worker.ts",
+    "src/modules/leads/**/*.ts",
+    "src/modules/shared/**/*.ts",
+    "src/generated/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}

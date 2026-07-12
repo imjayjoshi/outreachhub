@@ -1,5 +1,3 @@
-export { prisma } from "./database/prisma";
-export { redis } from "./database/redis";
 export { default as apiClient } from "./api/apiClient";
 export { RootProvider } from "./providers";
 export {

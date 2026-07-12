@@ -25,6 +25,10 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
     // Global handling for common status codes
     if (error.response) {
       const { status } = error.response;
