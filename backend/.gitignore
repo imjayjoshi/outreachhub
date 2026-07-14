@@ -1,0 +1,13 @@
+# dependencies
+node_modules
+
+# compilation output
+dist
+tsconfig.tsbuildinfo
+
+# local env file
+.env
+
+# system files
+.DS_Store
+Thumbs.db

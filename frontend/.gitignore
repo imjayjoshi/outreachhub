@@ -1,0 +1,17 @@
+# Next.js build and dependencies
+node_modules
+.next
+out
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# local env files
+.env*.local
+
+# production build outputs
+build
+dist
+
+# system files
+.DS_Store
+Thumbs.db
