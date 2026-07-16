@@ -56,7 +56,11 @@ export function ContactForm({
     if (open) {
       companyService
         .list()
-        .then(setCompanies)
+        .then((res) => {
+          if (res.success && res.data) {
+            setCompanies(res.data.list as Company[]);
+          }
+        })
         .catch(() => {});
     }
   }, [open]);

@@ -69,8 +69,8 @@ router.post("/import", async (req: AuthenticatedRequest, res: Response) => {
       // 1. Find or create company
       let company = await companyRepo
         .createQueryBuilder("company")
-        .where("company.userId = :userId", { userId })
-        .andWhere("LOWER(company.name) = LOWER(:name)", {
+        .where("company.createdBy = :userId", { userId })
+        .andWhere("LOWER(company.companyName) = LOWER(:name)", {
           name: row.companyName,
         })
         .getOne();
@@ -78,10 +78,10 @@ router.post("/import", async (req: AuthenticatedRequest, res: Response) => {
       if (!company) {
         company = companyRepo.create({
           id: nanoid(),
-          userId,
-          name: row.companyName,
+          createdBy: userId,
+          companyName: row.companyName,
           website: row.website || null,
-          location: row.location || null,
+          city: row.location || null,
           industry: row.industry || null,
         });
         await companyRepo.save(company);

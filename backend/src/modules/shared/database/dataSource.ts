@@ -12,6 +12,8 @@ import { CampaignContact } from "./entities/campaign-contact.entity.js";
 import { Lead } from "./entities/lead.entity.js";
 import { DailyFetchTarget } from "./entities/daily-fetch-target.entity.js";
 import { DailyFetchLog } from "./entities/daily-fetch-log.entity.js";
+import { ImportBatch } from "../../company/import-batch.entity.js";
+import { ImportBatchRow } from "../../company/import-batch-row.entity.js";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -25,7 +27,7 @@ export const AppDataSource = new DataSource({
   type: "postgres",
   url: DATABASE_URL,
   ssl: { rejectUnauthorized: false }, // required for Neon / hosted Postgres
-  synchronize: false, // use migrations in production; flip to true for first-time local dev
+  synchronize: true, // Set to true to automatically create/update tables in Neon for development
   logging: false, // disable SQL logging to reduce overhead
   entities: [
     User,
@@ -40,6 +42,8 @@ export const AppDataSource = new DataSource({
     Lead,
     DailyFetchTarget,
     DailyFetchLog,
+    ImportBatch,
+    ImportBatchRow,
   ],
   migrations: ["src/migrations/*.ts"],
   // Connection pool tuning for Neon serverless

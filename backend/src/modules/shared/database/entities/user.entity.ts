@@ -67,7 +67,7 @@ export class User {
   @OneToMany(() => Session, (s) => s.user)
   sessions: Session[];
 
-  @OneToMany(() => Company, (c) => c.user)
+  @OneToMany(() => Company, (c) => c.creator)
   companies: Company[];
 
   @OneToMany(() => Contact, (c) => c.user)

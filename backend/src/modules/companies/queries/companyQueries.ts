@@ -18,21 +18,25 @@ export type CompanyUpdateInput = Partial<CompanyCreateInput>;
 
 export async function listCompanies(userId: string) {
   return repo().find({
-    where: { userId },
+    where: { createdBy: userId },
     order: { createdAt: "DESC" },
   });
 }
 
 export async function getCompany(userId: string, id: string) {
   return repo().findOne({
-    where: { id, userId },
+    where: { id, createdBy: userId },
     relations: { contacts: true },
   });
 }
 
 export async function createCompany(userId: string, data: CompanyCreateInput) {
   const { nanoid } = await import("nanoid");
-  const company = repo().create({ ...data, userId, id: nanoid() });
+  const company = repo().create({
+    ...data,
+    createdBy: userId,
+    id: nanoid(),
+  } as any);
   return repo().save(company);
 }
 

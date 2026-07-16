@@ -14,6 +14,10 @@ import {
   Users,
   FileText,
   ExternalLink,
+  Mail,
+  Phone,
+  Briefcase,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -28,12 +32,20 @@ interface Contact {
 
 interface Company {
   id: string;
-  name: string;
-  website?: string | null;
-  industry?: string | null;
-  size?: string | null;
-  location?: string | null;
-  notes?: string | null;
+  companyName: string;
+  email: string | null;
+  phone: string | null;
+  careerUrl: string | null;
+  website: string | null;
+  linkedin: string | null;
+  industry: string | null;
+  description: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  employeeSize: string | null;
+  status: string;
+  source: string;
   createdAt: string;
   contacts: Contact[];
 }
@@ -55,7 +67,6 @@ export function CompanyDetail({ id }: CompanyDetailProps) {
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
-
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -76,7 +87,6 @@ export function CompanyDetail({ id }: CompanyDetailProps) {
     };
   }, [id, refreshKey]);
 
-  // setLoading(true) is called here — outside the effect — so the linter is satisfied.
   const fetchCompany = () => {
     setLoading(true);
     setRefreshKey((k) => k + 1);
@@ -94,7 +104,7 @@ export function CompanyDetail({ id }: CompanyDetailProps) {
 
   if (!company) {
     return (
-      <div className="flex flex-col items-center justify-center p-20 text-center">
+      <div className="flex flex-col items-center justify-center p-20 text-center select-none">
         <Building2 className="h-12 w-12 text-midnight-muted mb-4" />
         <h3 className="text-base font-semibold text-white">
           Company not found
@@ -111,8 +121,18 @@ export function CompanyDetail({ id }: CompanyDetailProps) {
     );
   }
 
+  // Helper to compile Location
+  const getLocationString = () => {
+    const parts = [company.city, company.state, company.country].filter(
+      Boolean,
+    );
+    return parts.length > 0 ? parts.join(", ") : null;
+  };
+
+  const locationStr = getLocationString();
+
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-6 space-y-6 max-w-4xl select-none">
       {/* Back + Edit Header */}
       <div className="flex items-center justify-between">
         <button
@@ -136,28 +156,36 @@ export function CompanyDetail({ id }: CompanyDetailProps) {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl border border-midnight-border bg-midnight-card/40 p-6 space-y-4"
+        className="rounded-xl border border-midnight-border bg-midnight-card/40 p-6 space-y-5"
       >
         <div className="flex items-start gap-4">
           <div className="h-14 w-14 shrink-0 rounded-xl bg-midnight-card border border-midnight-border flex items-center justify-center">
             <Building2 className="h-7 w-7 text-midnight-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-white">{company.name}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-white truncate">
+                {company.companyName}
+              </h1>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-midnight-success/15 text-midnight-success border border-midnight-success/20">
+                {company.status}
+              </span>
+            </div>
             <div className="flex flex-wrap items-center gap-3 mt-1.5 text-sm text-midnight-muted">
               {company.industry && (
                 <span className="inline-flex text-xs bg-midnight-primary/10 text-midnight-primary border border-midnight-primary/20 px-2.5 py-1 rounded-full font-medium">
                   {company.industry}
                 </span>
               )}
-              {company.location && (
+              {locationStr && (
                 <span className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" /> {company.location}
+                  <MapPin className="h-3.5 w-3.5" /> {locationStr}
                 </span>
               )}
-              {company.size && (
+              {company.employeeSize && (
                 <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" /> {company.size} employees
+                  <Users className="h-3.5 w-3.5" /> {company.employeeSize}{" "}
+                  employees
                 </span>
               )}
               {company.website && (
@@ -165,7 +193,7 @@ export function CompanyDetail({ id }: CompanyDetailProps) {
                   href={company.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 hover:text-midnight-secondary transition-colors"
+                  className="flex items-center gap-1 text-midnight-primary hover:text-midnight-secondary transition-colors"
                 >
                   <Globe className="h-3.5 w-3.5" />
                   {company.website.replace(/https?:\/\//, "")}
@@ -176,13 +204,76 @@ export function CompanyDetail({ id }: CompanyDetailProps) {
           </div>
         </div>
 
-        {company.notes && (
+        {/* Contact details */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-midnight-border">
+          <div className="flex items-center gap-2 text-xs">
+            <Mail className="h-4 w-4 text-midnight-muted shrink-0" />
+            <span className="text-midnight-muted font-medium">Email:</span>
+            <span
+              className="text-white truncate"
+              title={company.email || "N/A"}
+            >
+              {company.email || "N/A"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <Phone className="h-4 w-4 text-midnight-muted shrink-0" />
+            <span className="text-midnight-muted font-medium">Phone:</span>
+            <span
+              className="text-white truncate"
+              title={company.phone || "N/A"}
+            >
+              {company.phone || "N/A"}
+            </span>
+          </div>
+
+          {company.careerUrl ? (
+            <div className="flex items-center gap-2 text-xs">
+              <Briefcase className="h-4 w-4 text-midnight-muted shrink-0" />
+              <span className="text-midnight-muted font-medium">Careers:</span>
+              <a
+                href={company.careerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-midnight-primary hover:underline truncate"
+              >
+                Link{" "}
+                <ExternalLink className="h-2.5 w-2.5 inline-block ml-0.5" />
+              </a>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs">
+              <Briefcase className="h-4 w-4 text-midnight-muted shrink-0" />
+              <span className="text-midnight-muted font-medium">Careers:</span>
+              <span className="text-midnight-muted italic">N/A</span>
+            </div>
+          )}
+        </div>
+
+        {/* Metadata Source Log */}
+        <div className="flex items-center gap-2 text-[10px] text-midnight-muted pt-2.5 border-t border-midnight-border/50">
+          <History className="h-3.5 w-3.5" />
+          <span>
+            Source:{" "}
+            <strong className="text-white font-bold">{company.source}</strong>
+          </span>
+          <span>•</span>
+          <span>
+            Imported:{" "}
+            <strong className="text-white font-bold">
+              {new Date(company.createdAt).toLocaleString()}
+            </strong>
+          </span>
+        </div>
+
+        {company.description && (
           <div className="pt-3 border-t border-midnight-border">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-midnight-muted uppercase tracking-wide mb-2">
-              <FileText className="h-3.5 w-3.5" /> Notes
+              <FileText className="h-3.5 w-3.5" /> Description / Notes
             </div>
             <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">
-              {company.notes}
+              {company.description}
             </p>
           </div>
         )}
@@ -192,7 +283,7 @@ export function CompanyDetail({ id }: CompanyDetailProps) {
       <div>
         <h2 className="text-sm font-semibold text-white flex items-center gap-2 mb-3">
           <Users className="h-4 w-4 text-midnight-secondary" />
-          Contacts ({company.contacts.length})
+          Linked Contacts ({company.contacts.length})
         </h2>
 
         {company.contacts.length === 0 ? (
