@@ -2,7 +2,7 @@
 // Run with: pnpm leads:trigger
 // Enqueues an immediate job without waiting for the cron.
 
-import { triggerNow } from "./scheduler";
+import { triggerNow } from "./scheduler.js";
 import dotenv from "dotenv";
 
 dotenv.config();

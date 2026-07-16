@@ -1,4 +1,9 @@
-import { prisma } from "@/modules/shared/database/prisma";
+import { AppDataSource } from "@/modules/shared/database/dataSource.js";
+import { Company } from "@/modules/shared/database/entities/company.entity.js";
+
+function repo() {
+  return AppDataSource.getRepository(Company);
+}
 
 export interface CompanyCreateInput {
   name: string;
@@ -12,27 +17,30 @@ export interface CompanyCreateInput {
 export type CompanyUpdateInput = Partial<CompanyCreateInput>;
 
 export async function listCompanies(userId: string) {
-  return prisma.company.findMany({
+  return repo().find({
     where: { userId },
-    orderBy: { createdAt: "desc" },
+    order: { createdAt: "DESC" },
   });
 }
 
 export async function getCompany(userId: string, id: string) {
-  return prisma.company.findFirst({
+  return repo().findOne({
     where: { id, userId },
-    include: { contacts: true },
+    relations: { contacts: true },
   });
 }
 
 export async function createCompany(userId: string, data: CompanyCreateInput) {
-  return prisma.company.create({ data: { ...data, userId } });
+  const { nanoid } = await import("nanoid");
+  const company = repo().create({ ...data, userId, id: nanoid() });
+  return repo().save(company);
 }
 
 export async function updateCompany(id: string, data: CompanyUpdateInput) {
-  return prisma.company.update({ where: { id }, data });
+  await repo().update({ id }, data as Partial<Company>);
+  return repo().findOneBy({ id });
 }
 
 export async function deleteCompany(id: string) {
-  return prisma.company.delete({ where: { id } });
+  return repo().delete({ id });
 }

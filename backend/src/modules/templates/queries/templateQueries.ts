@@ -1,37 +1,44 @@
-import { prisma } from "@/modules/shared/database/prisma";
-import { Prisma } from "@prisma/client";
+import { AppDataSource } from "@/modules/shared/database/dataSource.js";
+import { Template } from "@/modules/shared/database/entities/template.entity.js";
+
+function repo() {
+  return AppDataSource.getRepository(Template);
+}
 
 export interface TemplateCreateInput {
   name: string;
   subject: string;
   body: string;
-  variables?: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue;
+  variables?: object | null;
 }
 
 export type TemplateUpdateInput = Partial<TemplateCreateInput>;
 
 export async function listTemplates(userId: string) {
-  return prisma.template.findMany({
+  return repo().find({
     where: { userId },
-    orderBy: { createdAt: "desc" },
+    order: { createdAt: "DESC" },
   });
 }
 
 export async function getTemplate(userId: string, id: string) {
-  return prisma.template.findFirst({ where: { id, userId } });
+  return repo().findOne({ where: { id, userId } });
 }
 
 export async function createTemplate(
   userId: string,
   data: TemplateCreateInput,
 ) {
-  return prisma.template.create({ data: { ...data, userId } });
+  const { nanoid } = await import("nanoid");
+  const template = repo().create({ ...data, userId, id: nanoid() });
+  return repo().save(template);
 }
 
 export async function updateTemplate(id: string, data: TemplateUpdateInput) {
-  return prisma.template.update({ where: { id }, data });
+  await repo().update({ id }, data as Partial<Template>);
+  return repo().findOneBy({ id });
 }
 
 export async function deleteTemplate(id: string) {
-  return prisma.template.delete({ where: { id } });
+  return repo().delete({ id });
 }

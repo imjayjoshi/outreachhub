@@ -1,13 +1,10 @@
+import "reflect-metadata";
 // Standalone worker entry point.
 // Run with: pnpm worker
 // This process must stay alive — it hosts the BullMQ worker + cron scheduler.
 
-import "@/modules/leads/jobs/dailyFetchJob";
-import { startScheduler } from "@/modules/leads/jobs/scheduler";
-import dotenv from "dotenv";
-
-dotenv.config();
-
+import "@/modules/leads/jobs/dailyFetchJob.js";
+import { startScheduler } from "@/modules/leads/jobs/scheduler.js";
 console.log("=".repeat(60));
 console.log("[worker] OutreachHub Lead Pipeline Worker started");
 console.log(`[worker] PID: ${process.pid}`);

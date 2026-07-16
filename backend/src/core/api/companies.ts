@@ -1,13 +1,15 @@
 import { Router, Response } from "express";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
+import { requireAuth, AuthenticatedRequest } from "@/middleware/auth.js";
 import {
   listCompanies,
   createCompany,
   getCompany,
   updateCompany,
   deleteCompany,
-} from "@/modules/companies/queries/companyQueries";
-import { prisma } from "@/modules/shared/database/prisma";
+} from "@/modules/companies/queries/companyQueries.js";
+import { AppDataSource } from "@/modules/shared/database/dataSource.js";
+import { Company } from "@/modules/shared/database/entities/company.entity.js";
+import { Contact } from "@/modules/shared/database/entities/contact.entity.js";
 
 const router = Router();
 
@@ -49,6 +51,7 @@ router.post("/", async (req: AuthenticatedRequest, res: Response) => {
 
 // POST /import
 router.post("/import", async (req: AuthenticatedRequest, res: Response) => {
+  const { nanoid } = await import("nanoid");
   try {
     const { rows } = req.body as { rows: ImportRow[] };
     if (!rows || !Array.isArray(rows)) {
@@ -57,50 +60,52 @@ router.post("/import", async (req: AuthenticatedRequest, res: Response) => {
 
     let importedCount = 0;
     const userId = req.user!.id;
+    const companyRepo = AppDataSource.getRepository(Company);
+    const contactRepo = AppDataSource.getRepository(Contact);
 
     for (const row of rows) {
       if (!row.companyName || !row.email) continue;
 
       // 1. Find or create company
-      let company = await prisma.company.findFirst({
-        where: {
-          userId,
-          name: { equals: row.companyName, mode: "insensitive" },
-        },
-      });
+      let company = await companyRepo
+        .createQueryBuilder("company")
+        .where("company.userId = :userId", { userId })
+        .andWhere("LOWER(company.name) = LOWER(:name)", {
+          name: row.companyName,
+        })
+        .getOne();
 
       if (!company) {
-        company = await prisma.company.create({
-          data: {
-            userId,
-            name: row.companyName,
-            website: row.website || null,
-            location: row.location || null,
-            industry: row.industry || null,
-          },
+        company = companyRepo.create({
+          id: nanoid(),
+          userId,
+          name: row.companyName,
+          website: row.website || null,
+          location: row.location || null,
+          industry: row.industry || null,
         });
+        await companyRepo.save(company);
       }
 
       // 2. Find or create contact
-      const contactExists = await prisma.contact.findFirst({
-        where: {
-          userId,
-          email: { equals: row.email, mode: "insensitive" },
-          companyId: company.id,
-        },
-      });
+      const contactExists = await contactRepo
+        .createQueryBuilder("contact")
+        .where("contact.userId = :userId", { userId })
+        .andWhere("LOWER(contact.email) = LOWER(:email)", { email: row.email })
+        .andWhere("contact.companyId = :companyId", { companyId: company.id })
+        .getOne();
 
       if (!contactExists) {
-        await prisma.contact.create({
-          data: {
-            userId,
-            companyId: company.id,
-            name: row.contactName || "Unknown",
-            email: row.email,
-            role: row.role || null,
-            phone: row.phone || null,
-          },
+        const contact = contactRepo.create({
+          id: nanoid(),
+          userId,
+          companyId: company.id,
+          name: row.contactName || "Unknown",
+          email: row.email,
+          role: row.role || null,
+          phone: row.phone || null,
         });
+        await contactRepo.save(contact);
         importedCount++;
       }
     }

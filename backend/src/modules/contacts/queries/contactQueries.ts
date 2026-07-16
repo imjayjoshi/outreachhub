@@ -1,4 +1,9 @@
-import { prisma } from "@/modules/shared/database/prisma";
+import { AppDataSource } from "@/modules/shared/database/dataSource.js";
+import { Contact } from "@/modules/shared/database/entities/contact.entity.js";
+
+function repo() {
+  return AppDataSource.getRepository(Contact);
+}
 
 export interface ContactCreateInput {
   name: string;
@@ -13,28 +18,31 @@ export interface ContactCreateInput {
 export type ContactUpdateInput = Partial<ContactCreateInput>;
 
 export async function listContacts(userId: string) {
-  return prisma.contact.findMany({
+  return repo().find({
     where: { userId },
-    orderBy: { createdAt: "desc" },
-    include: { company: { select: { id: true, name: true } } },
+    relations: { company: true },
+    order: { createdAt: "DESC" },
   });
 }
 
 export async function getContact(userId: string, id: string) {
-  return prisma.contact.findFirst({
+  return repo().findOne({
     where: { id, userId },
-    include: { company: { select: { id: true, name: true } } },
+    relations: { company: true },
   });
 }
 
 export async function createContact(userId: string, data: ContactCreateInput) {
-  return prisma.contact.create({ data: { ...data, userId } });
+  const { nanoid } = await import("nanoid");
+  const contact = repo().create({ ...data, userId, id: nanoid() });
+  return repo().save(contact);
 }
 
 export async function updateContact(id: string, data: ContactUpdateInput) {
-  return prisma.contact.update({ where: { id }, data });
+  await repo().update({ id }, data as Partial<Contact>);
+  return repo().findOneBy({ id });
 }
 
 export async function deleteContact(id: string) {
-  return prisma.contact.delete({ where: { id } });
+  return repo().delete({ id });
 }

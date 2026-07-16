@@ -1,12 +1,12 @@
 import { Router, Response } from "express";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
+import { requireAuth, AuthenticatedRequest } from "@/middleware/auth.js";
 import {
   listContacts,
   createContact,
   getContact,
   updateContact,
   deleteContact,
-} from "@/modules/contacts/queries/contactQueries";
+} from "@/modules/contacts/queries/contactQueries.js";
 
 const router = Router();
 

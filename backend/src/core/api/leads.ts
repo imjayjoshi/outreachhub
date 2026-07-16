@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
-import { listLeads } from "@/modules/leads/queries/leadQueries";
+import { requireAuth, AuthenticatedRequest } from "@/middleware/auth.js";
+import { listLeads } from "@/modules/leads/queries/leadQueries.js";
 
 const router = Router();
 

@@ -1,4 +1,10 @@
-import { prisma } from "@/modules/shared/database/prisma";
+import { AppDataSource } from "@/modules/shared/database/dataSource.js";
+import { Lead } from "@/modules/shared/database/entities/lead.entity.js";
+import { IsNull, Not, FindOptionsWhere } from "typeorm";
+
+function repo() {
+  return AppDataSource.getRepository(Lead);
+}
 
 export interface LeadCreateInput {
   name: string;
@@ -12,27 +18,28 @@ export interface LeadCreateInput {
 }
 
 export async function websiteExists(website: string): Promise<boolean> {
-  const lead = await prisma.lead.findUnique({
+  const lead = await repo().findOne({
     where: { website: website.toLowerCase().trim() },
-    select: { id: true },
+    select: ["id"],
   });
   return lead !== null;
 }
 
 export async function insertLead(userId: string, data: LeadCreateInput) {
-  return prisma.lead.create({
-    data: {
-      userId,
-      name: data.name,
-      website: data.website.toLowerCase().trim(),
-      city: data.city,
-      state: data.state,
-      industry: data.industry ?? "IT",
-      email: data.email ?? null,
-      source: data.source,
-      status: data.status ?? (data.email ? "new" : "email_not_found"),
-    },
+  const { nanoid } = await import("nanoid");
+  const lead = repo().create({
+    id: nanoid(),
+    userId,
+    name: data.name,
+    website: data.website.toLowerCase().trim(),
+    city: data.city,
+    state: data.state,
+    industry: data.industry ?? "IT",
+    email: data.email ?? null,
+    source: data.source,
+    status: data.status ?? (data.email ? "new" : "email_not_found"),
   });
+  return repo().save(lead);
 }
 
 export async function listLeads(
@@ -43,31 +50,28 @@ export async function listLeads(
     emailOnly?: boolean;
   },
 ) {
-  return prisma.lead.findMany({
-    where: {
-      userId,
-      ...(filters?.city ? { city: filters.city } : {}),
-      ...(filters?.status ? { status: filters.status } : {}),
-      ...(filters?.emailOnly ? { email: { not: null } } : {}),
-    },
-    orderBy: { createdAt: "desc" },
+  const where: FindOptionsWhere<Lead> = { userId };
+  if (filters?.city) where.city = filters.city;
+  if (filters?.status) where.status = filters.status;
+  if (filters?.emailOnly) where.email = Not(IsNull());
+
+  return repo().find({
+    where,
+    order: { createdAt: "DESC" },
   });
 }
 
 export async function updateLeadStatus(id: string, status: string) {
-  return prisma.lead.update({ where: { id }, data: { status } });
+  await repo().update({ id }, { status });
+  return repo().findOneBy({ id });
 }
 
 export async function markMailSent(id: string) {
-  return prisma.lead.update({
-    where: { id },
-    data: { mailSent: true, status: "mailed" },
-  });
+  await repo().update({ id }, { mailSent: true, status: "mailed" });
+  return repo().findOneBy({ id });
 }
 
 export async function markFollowUpSent(id: string) {
-  return prisma.lead.update({
-    where: { id },
-    data: { followUpSent: true, status: "followup" },
-  });
+  await repo().update({ id }, { followUpSent: true, status: "followup" });
+  return repo().findOneBy({ id });
 }

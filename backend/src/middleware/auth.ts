@@ -1,12 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      email: string;
+      name?: string | null;
+    }
+  }
+}
+
 export interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    name?: string | null;
-  };
+  user?: Express.User;
 }
 
 export function requireAuth(

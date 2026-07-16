@@ -5,7 +5,7 @@
 // Change to "0 8 * * *" for the production 8 AM schedule.
 
 import cron from "node-cron";
-import { leadFetchQueue } from "./dailyFetchJob";
+import { leadFetchQueue } from "./dailyFetchJob.js";
 
 // 7:15 PM IST = 13:45 UTC
 // cron format: minute hour day month weekday

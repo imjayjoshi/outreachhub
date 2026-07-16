@@ -46,8 +46,8 @@ export function AppShell({ user, children }: AppShellProps) {
   const handleSignOut = async () => {
     try {
       await authService.logout();
-    } catch (e) {
-      console.error("Sign out failed:", e);
+    } catch {
+      // Backend may be down — proceed with client-side cleanup anyway
     }
     dispatch(clearCredentials());
     router.push("/login");

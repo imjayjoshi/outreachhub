@@ -1,12 +1,12 @@
 import { Router, Response } from "express";
-import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
+import { requireAuth, AuthenticatedRequest } from "@/middleware/auth.js";
 import {
   listTemplates,
   getTemplate,
   createTemplate,
   updateTemplate,
   deleteTemplate,
-} from "@/modules/templates/queries/templateQueries";
+} from "@/modules/templates/queries/templateQueries.js";
 
 const router = Router();
 

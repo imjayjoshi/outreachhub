@@ -1,19 +1,38 @@
 // NOTE: This file uses Node.js APIs (BullMQ Worker) and MUST run in the standalone
-// worker process (pnpm worker), NOT inside Next.js serverless functions.
+// worker process (pnpm worker), NOT inside the main Express server.
 
-import { Worker, Queue } from "bullmq";
-import { PrismaClient } from "@prisma/client";
-import { searchCompanies } from "../discovery/searchService";
-import { scrapeClutch } from "../discovery/clutchService";
-import { scrapeGoodFirms } from "../discovery/goodfirmsService";
-import { mergeSources, type RawLead } from "../discovery/mergeService";
-import { findEmailOnWebsite } from "../discovery/emailCrawlerService";
+import "reflect-metadata";
+import { Worker, Queue, Job } from "bullmq";
+import { DataSource } from "typeorm";
+import { Lead } from "@/modules/shared/database/entities/lead.entity.js";
+import { DailyFetchTarget } from "@/modules/shared/database/entities/daily-fetch-target.entity.js";
+import { DailyFetchLog } from "@/modules/shared/database/entities/daily-fetch-log.entity.js";
+import { searchCompanies } from "../discovery/searchService.js";
+import { scrapeClutch } from "../discovery/clutchService.js";
+import { scrapeGoodFirms } from "../discovery/goodfirmsService.js";
+import { mergeSources, type RawLead } from "../discovery/mergeService.js";
+import { findEmailOnWebsite } from "../discovery/emailCrawlerService.js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Standalone Prisma client for the worker process
-const prisma = new PrismaClient();
+// Standalone TypeORM DataSource for the worker process
+const workerDataSource = new DataSource({
+  type: "postgres",
+  url: process.env.DATABASE_URL!,
+  ssl: { rejectUnauthorized: false },
+  synchronize: false,
+  logging: false,
+  entities: [Lead, DailyFetchTarget, DailyFetchLog],
+});
+
+async function getDS() {
+  if (!workerDataSource.isInitialized) {
+    await workerDataSource.initialize();
+    console.log("[dailyFetchJob] Worker DB connected");
+  }
+  return workerDataSource;
+}
 
 export const leadFetchQueue = new Queue("daily-lead-fetch", {
   connection: { url: process.env.REDIS_URL! },
@@ -21,12 +40,18 @@ export const leadFetchQueue = new Queue("daily-lead-fetch", {
 
 export const dailyFetchWorker = new Worker(
   "daily-lead-fetch",
-  async (job) => {
+  async (job: Job) => {
+    const { nanoid } = await import("nanoid");
     console.log(
       `[dailyFetchJob] Starting job ${job.id} at ${new Date().toISOString()}`,
     );
 
-    const targets = await prisma.dailyFetchTarget.findMany();
+    const ds = await getDS();
+    const leadRepo = ds.getRepository(Lead);
+    const targetRepo = ds.getRepository(DailyFetchTarget);
+    const logRepo = ds.getRepository(DailyFetchLog);
+
+    const targets = await targetRepo.find();
     const systemUserId = process.env.SYSTEM_USER_ID!;
 
     if (!systemUserId) {
@@ -81,9 +106,9 @@ export const dailyFetchWorker = new Worker(
         if (inserted >= target.target) break;
 
         // Dedup check
-        const exists = await prisma.lead.findUnique({
+        const exists = await leadRepo.findOne({
           where: { website: lead.website },
-          select: { id: true },
+          select: ["id"],
         });
 
         if (exists) {
@@ -103,19 +128,19 @@ export const dailyFetchWorker = new Worker(
 
         // Insert lead
         try {
-          await prisma.lead.create({
-            data: {
-              userId: systemUserId,
-              name: lead.name,
-              website: lead.website,
-              city: target.city,
-              state: target.state,
-              industry: "IT",
-              email,
-              source: lead.source,
-              status: email ? "new" : "email_not_found",
-            },
+          const newLead = leadRepo.create({
+            id: nanoid(),
+            userId: systemUserId,
+            name: lead.name,
+            website: lead.website,
+            city: target.city,
+            state: target.state,
+            industry: "IT",
+            email,
+            source: lead.source,
+            status: email ? "new" : "email_not_found",
           });
+          await leadRepo.save(newLead);
           inserted++;
           console.log(
             `[dailyFetchJob] Inserted: ${lead.name} (${lead.website}) email=${email ?? "not found"}`,
@@ -129,16 +154,16 @@ export const dailyFetchWorker = new Worker(
       }
 
       // Write fetch log
-      await prisma.dailyFetchLog.create({
-        data: {
-          city: target.city,
-          found: merged.length,
-          duplicates,
-          inserted,
-          emailsFound,
-          status: "success",
-        },
+      const log = logRepo.create({
+        id: nanoid(),
+        city: target.city,
+        found: merged.length,
+        duplicates,
+        inserted,
+        emailsFound,
+        status: "success",
       });
+      await logRepo.save(log);
 
       console.log(
         `[dailyFetchJob] ${target.city} done — found=${merged.length} inserted=${inserted} duplicates=${duplicates} emails=${emailsFound}`,
@@ -146,7 +171,7 @@ export const dailyFetchWorker = new Worker(
     }
 
     console.log(`[dailyFetchJob] Job ${job.id} completed.`);
-    await prisma.$disconnect();
+    await workerDataSource.destroy();
   },
   {
     connection: { url: process.env.REDIS_URL! },
@@ -154,10 +179,10 @@ export const dailyFetchWorker = new Worker(
   },
 );
 
-dailyFetchWorker.on("completed", (job) => {
+dailyFetchWorker.on("completed", (job: Job) => {
   console.log(`[dailyFetchJob] ✓ Job ${job.id} completed successfully`);
 });
 
-dailyFetchWorker.on("failed", (job, err) => {
+dailyFetchWorker.on("failed", (job: Job | undefined, err: Error) => {
   console.error(`[dailyFetchJob] ✗ Job ${job?.id} failed:`, err.message);
 });

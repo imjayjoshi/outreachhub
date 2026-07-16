@@ -22,7 +22,7 @@ export function RootProvider({
   return (
     <AuthProvider session={session}>
       <ReduxProvider>
-        <AuthSync>{children}</AuthSync>
+        <AuthSync serverUser={session?.user ?? null}>{children}</AuthSync>
       </ReduxProvider>
     </AuthProvider>
   );

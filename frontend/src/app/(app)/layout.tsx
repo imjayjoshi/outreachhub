@@ -10,7 +10,7 @@ export default async function AppLayout({
   const session = await auth();
 
   if (!session?.user) {
-    redirect("/login");
+    redirect("/login?expired=1");
   }
 
   return <AppShell user={session.user}>{children}</AppShell>;

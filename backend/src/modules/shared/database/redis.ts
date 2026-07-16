@@ -1,15 +1,22 @@
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 
-const globalForRedis = globalThis as unknown as {
-  redis?: Redis;
-};
+let _redis: Redis | null = null;
 
-export const redis =
-  globalForRedis.redis ??
-  new Redis(process.env.REDIS_URL as string, {
-    maxRetriesPerRequest: null, // Required for BullMQ compatibility
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForRedis.redis = redis;
+export function getRedis(): Redis {
+  if (!_redis) {
+    const url = process.env.REDIS_URL;
+    if (!url) {
+      throw new Error("REDIS_URL is not defined in environment variables");
+    }
+    _redis = new Redis(url, {
+      maxRetriesPerRequest: null, // Required for BullMQ compatibility
+    });
+  }
+  return _redis;
 }
+
+export const redis = new Proxy({} as Redis, {
+  get(_target, prop) {
+    return (getRedis() as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
