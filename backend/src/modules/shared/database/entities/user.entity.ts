@@ -52,6 +52,9 @@ export class User {
   @Column({ type: "timestamp", nullable: true })
   tokenExpiry: Date | null;
 
+  @Column({ type: "timestamp", nullable: true })
+  lastLogin: Date | null;
+
   @CreateDateColumn({ type: "timestamp" })
   createdAt: Date;
 

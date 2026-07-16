@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { google } from "googleapis";
+import { GoogleUserDto } from "./dto/google-user.dto.js";
 
 export class GoogleService {
   private encryptionKey: Buffer;
@@ -14,7 +15,6 @@ export class GoogleService {
 
   /**
    * Encrypts the refresh token using AES-256-GCM.
-   * Format: iv_hex:auth_tag_hex:encrypted_data_hex
    */
   public encryptToken(token: string): string {
     const iv = crypto.randomBytes(12);
@@ -86,9 +86,9 @@ export class GoogleService {
   }
 
   /**
-   * Maps Google profile details into internal representation.
+   * Maps Google profile details into DTO structure.
    */
-  public mapProfile(profile: any) {
+  public mapProfile(profile: any): GoogleUserDto {
     const email =
       profile.emails && profile.emails[0] ? profile.emails[0].value : "";
     const avatar =
@@ -98,13 +98,13 @@ export class GoogleService {
       `${profile.name?.givenName || ""} ${profile.name?.familyName || ""}`.trim() ||
       null;
 
-    return {
+    return new GoogleUserDto({
       googleId: profile.id,
       email,
       name,
       avatar,
       provider: "google",
       providerId: profile.id,
-    };
+    });
   }
 }

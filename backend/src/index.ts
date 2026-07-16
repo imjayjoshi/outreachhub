@@ -4,7 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { initDataSource } from "@/modules/shared/database/dataSource.js";
 import coreRouter from "@/core/api/index.js";
-import { initPassport } from "@/modules/auth/config/passport.config.js";
+import { initPassport } from "@/modules/auth/config/passport.js";
 import googleAuthRouter from "@/modules/auth/google/google.routes.js";
 
 const app = express();

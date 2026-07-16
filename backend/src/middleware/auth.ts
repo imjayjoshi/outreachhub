@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { requireAuth as requireAuthFromModule } from "../modules/auth/middleware/auth.middleware.js";
 
 declare global {
   namespace Express {
@@ -20,25 +20,5 @@ export function requireAuth(
   res: Response,
   next: NextFunction,
 ) {
-  const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  try {
-    const secret =
-      process.env.JWT_SECRET ||
-      process.env.AUTH_SECRET ||
-      "default_auth_secret_key_123";
-    const decoded = jwt.verify(token, secret) as {
-      id: string;
-      email: string;
-      name?: string | null;
-    };
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
+  return requireAuthFromModule(req, res, next);
 }

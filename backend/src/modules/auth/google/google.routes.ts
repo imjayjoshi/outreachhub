@@ -1,8 +1,10 @@
 import { Router } from "express";
 import passport from "passport";
 import { GoogleController } from "./google.controller.js";
+import { AuthService } from "./auth.service.js";
 import { GoogleService } from "./google.service.js";
 import { JwtService } from "./jwt.service.js";
+import { GoogleRepository } from "./google.repository.js";
 
 export class GoogleRoutes {
   public readonly router: Router;
@@ -45,9 +47,15 @@ export class GoogleRoutes {
 }
 
 // Instantiate singleton with Dependency Injection
+const googleRepository = new GoogleRepository();
 const googleService = new GoogleService();
 const jwtService = new JwtService();
-const googleController = new GoogleController(googleService, jwtService);
+const authService = new AuthService(
+  googleRepository,
+  googleService,
+  jwtService,
+);
+const googleController = new GoogleController(authService);
 const googleRoutesInstance = new GoogleRoutes(googleController);
 
 export default googleRoutesInstance.router;
