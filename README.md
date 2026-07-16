@@ -1,158 +1,138 @@
-# CareerFlow
+# OutreachHub / CareerFlow
 
-CareerFlow is a modern, high-performance web application designed to manage, automate, and monitor career outreach and campaign analytics.
+OutreachHub (CareerFlow) is a modern, high-performance monorepo application designed to manage, automate, and monitor career outreach, contacts, and campaign analytics.
 
-It is built with **Next.js 15 (App Router)**, **React 19**, **Prisma ORM 7 (Neon Serverless PostgreSQL)**, **Redux Toolkit**, **NextAuth.js v5**, and styled with **Tailwind CSS v4** featuring the premium **Midnight Ink** design system.
+This repository is structured as a monorepo featuring a **Next.js 15 frontend** and an **Express.js / TypeORM backend**.
 
 ---
 
-## 1. Directory Architecture (Modular Monolith)
+## 1. Project Architecture (Monorepo)
 
-This application adheres to an industry-standard **Modular Monolith** structure under the `src/` directory. All features and domains are encapsulated within self-contained modules to prevent imports spaghetti and maintain clear boundaries.
+The repository is organized using `pnpm` workspaces:
 
 ```
-src/
-├── app/                  # Route Definitions (Thin Page Shells only)
-│   ├── api/auth/         # NextAuth handler routes
-│   ├── (app)/            # Authenticated App Route Group
-│   │   ├── companies/    # Companies page
-│   │   ├── contacts/     # Contacts page
-│   │   └── dashboard/    # Dashboard overview page
-│   ├── login/            # Login view shell
-│   └── layout.tsx        # Root HTML Layout, wraps RootProvider
+outreachhub/
+├── package.json          # Monorepo scripts (concurrently launches both projects)
+├── pnpm-workspace.yaml   # Workspace packages definitions
 │
-├── components/           # General Shared UI components (Shadcn/UI components)
-│   └── ui/               # Lower-level design building blocks (button, inputs, etc.)
+├── backend/              # Node.js / Express.js Backend Package
+│   ├── src/
+│   │   ├── index.ts      # Server entrypoint
+│   │   ├── middleware/   # JWT Authentication & Error Handlers
+│   │   ├── core/         # Core API router mounts
+│   │   ├── modules/      # Modular Backend Domains
+│   │   │   ├── company/  # Company CRUD, Repositories, DTOs, and Validators
+│   │   │   ├── import/   # Spreadsheet Parsers, Delimited Email Validators, and Duplicate Checks
+│   │   │   └── auth/     # Google OAuth, JWT Strategies, and Session Logins
+│   │   └── migrations/   # TypeORM PostgreSQL Schema Migrations
+│   └── package.json
 │
-├── lib/                  # Central utility helpers (e.g., standard cn utility)
-│   └── utils.ts
-│
-└── modules/              # Unified Core Modules
-    ├── auth/             # Encapsulates Login components, validators, and auth syncing
-    │   ├── components/   # LoginPage view
-    │   ├── providers/    # AuthSync component (synchronizes NextAuth session to Redux)
-    │   ├── redux/        # authSlice state & actions
-    │   ├── schemas/      # Yup Formik validation schemas
-    │   ├── auth.ts       # Node-based credentials authorization handler
-    │   ├── auth.config.ts# Edge-compatible NextAuth path authorization callbacks
-    │   └── index.ts      # Public API gateway (Public exports for other modules)
-    │
-    ├── companies/        # Encapsulates Companies views, bulk CSV import APIs, and mutations
-    │   ├── components/   # CompanyList, AddEditCompany views
-    │   ├── queries/      # db mutations and queries for companies
-    │   └── index.ts      # Public API gateway
-    │
-    ├── contacts/         # Handles lead contacts, details, and association queries
-    │   ├── components/   # ContactsTable, AddEditContact views
-    │   └── index.ts      # Public API gateway
-    │
-    ├── dashboard/        # Encapsulates Layout, Navigation Drawer, and metrics widgets
-    │   ├── components/   # AppShell layout, DashboardClient panels
-    │   ├── config/       # vertical menu items setup
-    │   └── index.ts      # Public API gateway
-    │
-    ├── leads/            # Workflows for leads scrapers, web crawler engines (Clutch), and schedulers
-    │   ├── discovery/    # clutchService, searchService engines
-    │   ├── jobs/         # scheduler, trigger, and dailyFetchJob worker setup
-    │   └── index.ts      # Public API gateway
-    │
-    └── shared/           # Cross-cutting concerns and core infrastructure
-        ├── api/          # Central Axios API client
-        ├── database/     # Prisma database & Redis cache connections
-        ├── providers/    # RootProvider (AuthProvider + ReduxProvider + AuthSync)
-        ├── redux/        # Main Redux Store definition & UI slice
-        └── index.ts      # Public API gateway
+└── frontend/             # Next.js 15 Frontend Package
+    ├── src/
+    │   ├── app/          # App Router Paths (Thin Page Shells)
+    │   ├── components/   # Shared UI elements (Shadcn components)
+    │   └── modules/      # Unified Core Modules
+    │       ├── companies/# Company directory table, import wizard, and detail sheets
+    │       ├── contacts/ # Linked lead contact profiles and status trackers
+    │       └── shared/   # Redux Toolkit Store, Axios apiClient, and Midnight Ink theme
+    └── package.json
 ```
 
-### Module Boundary Rules
+---
 
-- Every module exposes a public entry point (`src/modules/<module-name>/index.ts`).
-- Other modules or routing files **must** only import assets, slices, hooks, or components from this high-level gateway (e.g., `import { LoginPage } from "@/modules/auth"`).
-- Avoid deep imports (e.g., `import ... from "@/modules/auth/components/LoginPage"`) to maintain high cohesion and clear modular decoupling.
+## 2. Phase 2: Enterprise Company Import & Management Module
+
+This module serves as the primary CRM core for importing, validating, filtering, and organizing target corporate profiles.
+
+### Key Features
+* **5-Step Import Wizard**: Drag-and-drop spreadsheets (`.xlsx`, `.xls`, `.csv`), review parsed tables, map columns with auto-detection/overrides, review live data validator dry-runs, and view progress success summaries.
+* **Delimited Email Extractor**: Automatically splits, cleanses, and validates multi-email fields separated by delimiters (e.g. `,`, `/`, `|`, `-`, `_`).
+* **High-Speed Duplicate Detector**: Uses in-memory O(1) checks matching Website, Career Page, Email, or Company Name against pre-indexed existing owner records.
+* **Transactional Bulk Logs**: Chunk-inserts companies within database transactions, creating detailed batch statistics (`ImportBatch`) and individual row outcome logs (`ImportBatchRow`).
+* **Enterprise Listing Table**: A premium sticky-header data grid containing multiple quick-filters, keyword search, row multi-selection, and a sliding drawer for bulk actions (CSV export, bulk archive, bulk soft-delete, and detail generation triggers).
+* **Fully Audited Soft Delete**: Implements soft-deletion of company records using TypeORM `@DeleteDateColumn()`, keeping data safe from accidental loss.
 
 ---
 
-## 2. Shared Axios API Client
+## 3. Technology Stack
 
-All server and environment-safe requests are routed through the central master API client located in **`src/modules/shared/api/apiClient.ts`**:
+### Frontend
+- **Framework**: Next.js 15 (App Router, React 19)
+- **State Management**: Redux Toolkit
+- **API Client**: Axios (with cancellation & global error interceptors)
+- **Styling**: Tailwind CSS & Shadcn UI
+- **Design System**: Premium **Midnight Ink** dark theme
 
-- **Environment Agnostic**: Fully safe for both server-side execution (Server Components/Actions) and client-side execution.
-- **Auto Base URL**: Prefixes endpoints with `/api` or the defined environment variables.
-- **Cancel Interceptors**: Automatically ignores aborted/cancelled requests during page transitions to prevent false-alarm console warning logs.
-- **Global Interceptors**:
-  - **Request Interceptor**: Configured to dynamically append authorization tokens or request parameters.
-  - **Response Interceptor**: Centralizes global error codes handling (such as logging warnings on `401 Unauthorized` or displaying errors on `500 Server Errors`).
-
----
-
-## 3. Design System & Theme (Midnight Ink)
-
-We use the customized **Midnight Ink** dark palette. Standard shadcn elements and Tailwind variables map directly to default `:root` variables defined in `src/app/globals.css`:
-
-- **Typography**: **Poppins** is set globally on the `<body>` element.
-- **Colors**:
-  - **Background**: `#0B0F14` (`bg-midnight-bg`)
-  - **Surface**: `#141A22` (`bg-midnight-surface`)
-  - **Card**: `#1A2230` (`bg-midnight-card`)
-  - **Primary (Accent Blue)**: `#5A8DFF` (`bg-midnight-primary`)
-  - **Secondary (Teal/Cyan)**: `#4FD1C5` (`text-midnight-secondary`)
-  - **Border**: `#2B3442` (`border-midnight-border`)
-  - **Text**: `#F8FAFC`
-  - **Muted**: `#94A3B8` (`text-midnight-muted`)
+### Backend
+- **Framework**: Express.js (TypeScript)
+- **Database ORM**: TypeORM (PostgreSQL)
+- **Queue & Workers**: BullMQ (Redis)
+- **Parsing**: SheetJS (`xlsx`) for in-memory uploads
+- **Validation**: Zod (ZodSchema middleware)
 
 ---
 
 ## 4. Setup & Installation
 
-### A. Environment Configuration
+### A. Prerequisites
+Make sure you have **PostgreSQL** and **Redis** running locally or provisioned in the cloud.
 
-Create a `.env` file in the root directory and define the following:
+### B. Environment Configuration
+
+Create a `.env` file inside the `backend` folder:
 
 ```env
-DATABASE_URL="postgresql://user:pass@host/dbname?sslmode=require"
+PORT=5000
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/outreachhub"
 REDIS_URL="redis://localhost:6379"
-NEXTAUTH_SECRET="your-super-secret-random-key"
-NEXTAUTH_URL="http://localhost:3000"
+JWT_SECRET="your-super-secret-jwt-key"
+GOOGLE_CLIENT_ID="your-google-oauth-client-id"
+GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
+SESSION_SECRET="your-session-secret"
+FRONTEND_URL="http://localhost:3000"
 ```
 
-### B. Install Dependencies
+Create a `.env.local` file inside the `frontend` folder:
+
+```env
+NEXT_PUBLIC_API_URL="http://localhost:5000/api/v1"
+```
+
+### C. Install Dependencies
+Run the installation command in the monorepo root:
 
 ```bash
 pnpm install
 ```
 
-### C. Initialize Database & Seed
-
-Prisma 7 connection settings are configured inside `prisma.config.ts` and loaded dynamically. The client is generated in the standard `node_modules` path:
+### D. Run Database Migrations & Seeds
+Push the schema migrations and load testing seed records:
 
 ```bash
-# Push schema migrations
-pnpm prisma db push
-
-# Generate client
-pnpm prisma generate
-
-# Seed test users
-pnpm prisma db seed
+pnpm db:migrate
+pnpm db:seed
 ```
 
-- **Test Email**: `test@outreachhub.dev`
-- **Test Password**: `password123`
+- **Seed User Email**: `test@outreachhub.dev`
+- **Seed User Password**: `password123`
 
 ---
 
 ## 5. Development Workflows & Scripts
 
-Run the development server locally:
+Launch both the Next.js frontend and Express backend concurrently in development mode:
 
 ```bash
 pnpm dev
 ```
 
-### Quality Tooling
+### Build & Verification
+Compile and run static typechecks across both packages to verify code health:
 
-Before making commits, Husky triggers ESLint fixes and Prettier formatting automatically on modified files.
+```bash
+# Verify backend and frontend builds
+pnpm build
 
-- **Typecheck**: `pnpm typecheck` (runs `tsc --noEmit` to validate all TypeScript code).
-- **Linting**: `pnpm lint` (runs ESLint on the source directory).
-- **Format**: `pnpm format` (runs Prettier validation).
+# Run TypeScript check on frontend
+pnpm --filter outreachhub-frontend typecheck
+```
